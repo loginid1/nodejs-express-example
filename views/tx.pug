@@ -1,0 +1,11 @@
+extends template.pug
+
+block content
+	div.group
+		h2 Transaction Confirmation
+		span#tx-id(class="copy")
+		label Transaction Payload:
+		input#tx-payload 
+		button#tx-create Create Transaction ID
+		button#tx-create-confirm Create and Confirm Transaction
+		button#authenticate-fido2 Login FIDO2

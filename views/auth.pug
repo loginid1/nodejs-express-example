@@ -1,0 +1,22 @@
+extends template.pug
+
+block content
+	h2 Register/Login
+
+	div.group
+		input#name-fido2(placeholder="Username")
+		button#register-fido2 Register
+		button#authenticate-fido2 Login
+
+	h2 Create Code
+	div.group
+		span#message
+		button#add-code-button Create Code
+
+	h2 Add Credential
+	div.group
+		input#add-auth(placeholder="Username")
+		input#code(placeholder="Code")
+		button#add-button Add Credential
+
+	script(src="/registerLoginExample.js")
