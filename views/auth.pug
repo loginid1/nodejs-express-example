@@ -8,15 +8,18 @@ block content
 		button#register-fido2 Register
 		button#authenticate-fido2 Login
 
-	h2 Create Code
+	h3 Push Authentication
 	div.group
-		span#message
-		button#add-code-button Create Code
+		input#name-push(placeholder="Username")
+		input#code-push(placeholder="Code")
+		button#button-push Authenticate
 
-	h2 Add Credential
+	h3 Add Credential
 	div.group
-		input#add-auth(placeholder="Username")
-		input#code(placeholder="Code")
-		button#add-button Add Credential
+		input#name-add(placeholder="Username")
+		input#code-add(placeholder="Code")
+		button#button-add Authenticate
+
+	a.link(href="/codes") Generate Code
 
 	script(src="/registerLoginExample.js")

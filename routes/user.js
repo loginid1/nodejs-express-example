@@ -3,17 +3,17 @@ const { validateJWt, setJwt } = require("../middleware/user");
 
 const router = express.Router();
 
-router.post("/register", validateJWt, setJwt, (req, res) => {
-  return res.render("dashboard", { user: req.session.user });
+router.post("/register", validateJWt, setJwt, (_, res) => {
+  return res.status(204).send("OK");
 });
 
-router.post("/login", validateJWt, setJwt, (req, res) => {
-  return res.render("dashboard", { user: req.session.user });
+router.post("/login", validateJWt, setJwt, (_, res) => {
+  return res.status(204).send("OK");
 });
 
-router.post("/logout", (_, res) => {
+router.post("/logout", (req, res) => {
   res.clearCookie("authorization");
-  res.session.user = {};
+  req.session.user = {};
   return res.redirect("/");
 });
 

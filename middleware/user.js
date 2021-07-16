@@ -34,7 +34,7 @@ const validateJWt = async (req, res, next) => {
     return next();
   } catch (e) {
     console.error(e);
-    return res.status(400).render("error", { message: e.message });
+    return res.status(401).render("error", { message: e.message });
   }
 };
 
