@@ -10,10 +10,10 @@
 A .env file is needed in the directory with the following:
 
 ```
-BASE_URL=
-WEB_CLIENT_ID=
-MANAGEMENT_CLIENT_ID=
-PRIVATE_KEY=
+BASE_URL=                  #This is the base url value found on the dashboard.
+WEB_CLIENT_ID=             #This is a Web client ID (no credential).
+MANAGEMENT_CLIENT_ID=      #This is a Backend client ID with a credential attached to it.
+PRIVATE_KEY=               #This is the private key associated with <MANAGEMENT_CLIENT_ID>.
 ```
 
 ## How to Run
