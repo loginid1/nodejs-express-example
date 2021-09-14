@@ -6,30 +6,29 @@ const baseUrl = process.env.BASE_URL;
 
 const loginId = new LoginId(webId, privateKey, baseUrl);
 
-const validateJWt = async (req, res, next) => {
-  let jwt;
-
-  if (req.body.jwt && req.body.user) {
-    jwt = req.body.jwt;
-    req.session.user = req.body.user;
+const validateSession = async (req, res, next) => {
+  if (req.session.user) {
+    return next();
   }
 
-  if (req.signedCookies["authorization"] && req.session.user) {
-    jwt = req.signedCookies["authorization"];
-  }
+  const { jwt, user } = req.body;
 
   if (!jwt) {
     return res.redirect("/");
   }
 
   try {
-    const isValid = await loginId.verifyToken(jwt);
+    const username = user?.username;
+    const isValid = await loginId.verifyToken(jwt, username);
 
     if (!isValid) {
       throw new Error("Authorization failed");
     }
 
-    req.jwt = jwt;
+    //during registration route you can create a user in a database
+    //during an authentication route you can retrieve a user from a database
+    //demo will use a simple session instead
+    req.session.user = req.body.user;
 
     return next();
   } catch (e) {
@@ -38,22 +37,4 @@ const validateJWt = async (req, res, next) => {
   }
 };
 
-const setJwt = (req, res, next) => {
-  const { jwt } = req;
-
-  if (!jwt) {
-    return res.status(404).render("error", { message: "JWT does not exist" });
-  }
-
-  res.cookie("authorization", jwt, {
-    httpOnly: true,
-    maxAge: 60 * 60 * 1000,
-    signed: true,
-    sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
-  });
-
-  next();
-};
-
-module.exports = { validateJWt, setJwt };
+module.exports = { validateSession };

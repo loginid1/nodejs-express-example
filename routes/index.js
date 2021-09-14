@@ -1,5 +1,5 @@
 const express = require("express");
-const { validateJWt } = require("../middleware/user");
+const { validateSession } = require("../middleware/user");
 
 const router = express.Router();
 
@@ -11,7 +11,7 @@ router.get("/codes", (_, res) => {
   return res.render("codes");
 });
 
-router.get("/dashboard", validateJWt, (req, res) => {
+router.get("/dashboard", validateSession, (req, res) => {
   return res.render("dashboard", { user: req.session.user });
 });
 
