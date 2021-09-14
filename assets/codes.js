@@ -13,36 +13,35 @@ const clientId = dataElem.dataset.clientId;
 
 const webSDK = new web.default(baseUrl, clientId);
 
+const request = async (url, body) => {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (res.status === 204) {
+    return {};
+  }
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.message || "Bad Request");
+  }
+
+  return data;
+};
+
 const handlerPushAuth = async () => {
+  const username = pushUsernameInput.value;
   try {
     //1. Create unauthorized code
-    const res = await fetch("/api/codes/push/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        username: pushUsernameInput.value,
-      }),
-    });
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw data;
-    }
-
-    const { code } = data;
-
+    const { code } = await request("/api/codes/push/generate", { username });
     pushMessageElm.textContent = code;
 
     //2. Wait for code to be authorized
-    await fetch("/api/codes/wait", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        username: pushUsernameInput.value,
-        code: code,
-      }),
-    });
-
+    await request("/api/codes/wait", { username, code });
     window.location.replace("/dashboard");
   } catch (e) {
     console.log(e);
@@ -51,23 +50,10 @@ const handlerPushAuth = async () => {
 };
 
 const handlerAddAuthCode = async () => {
+  const username = addUsernameInput.value;
   try {
     //1. Create unauthorized code
-    const res = await fetch("/api/codes/add/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        username: addUsernameInput.value,
-      }),
-    });
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw data;
-    }
-
-    const { code } = data;
-
+    const { code } = await request("/api/codes/add/generate", { username });
     addMessageElm.textContent = code;
   } catch (e) {
     console.log(e);
@@ -76,22 +62,26 @@ const handlerAddAuthCode = async () => {
 };
 
 const handlerAddAuth = async () => {
+  const username = addUsernameInput.value;
+  const code = addMessageElm.textContent;
   try {
     //2. Start add auth process
-    const result = await webSDK.addFido2CredentialWithCode(
-      addUsernameInput.value,
-      addMessageElm.textContent
+    const { service_token: serviceToken } = await request(
+      "/api/tokens/create",
+      {
+        type: "credentials.add",
+        username,
+      }
+    );
+    const { jwt, user } = await webSDK.addFido2CredentialWithCode(
+      username,
+      code,
+      serviceToken,
+      { code_type: "short" }
     );
 
-    const res = await fetch("/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jwt: result.jwt, user: result.user }),
-    });
-
-    if (res.ok) {
-      window.location.replace("/dashboard");
-    }
+    await request("/login", { jwt, user });
+    window.location.replace("/dashboard");
   } catch (e) {
     console.log(e);
     alert(e.message);

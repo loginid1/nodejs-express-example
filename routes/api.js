@@ -82,7 +82,7 @@ router.post("/codes/:authentication/generate", async (req, res) => {
   }
 });
 
-router.post("/codes/wait", async (req, res, next) => {
+router.post("/codes/wait", async (req, res) => {
   const { username, code } = req.body;
   const type = "short";
 
@@ -91,10 +91,9 @@ router.post("/codes/wait", async (req, res, next) => {
   }
 
   try {
-    const { user, jwt } = await management.waitCode(username, code, type);
-    req.body.user = user;
-    req.body.jwt = jwt;
-    validateSession(req, res, next);
+    const { user } = await management.waitCode(username, code, type);
+    //you can pull user from database instead
+    req.session.user = user;
     return res.status(204).end();
   } catch (e) {
     console.log(e);
@@ -103,7 +102,6 @@ router.post("/codes/wait", async (req, res, next) => {
 });
 
 router.post("/codes/:authentication/authorize", async (req, res) => {
-  debugger;
   const { username, code } = req.body;
   const { authentication } = req.params;
   const type = "short";
@@ -127,6 +125,19 @@ router.post("/codes/:authentication/authorize", async (req, res) => {
     console.log(e);
     return res.status(400).json({ message: e.message });
   }
+});
+
+router.post("/tokens/create", async (req, res) => {
+  const { type, username, tx_payload: txPayload } = req.body;
+
+  let serviceToken;
+  if (txPayload) {
+    serviceToken = loginid.generateTxAuthToken(txPayload, username);
+  } else {
+    serviceToken = loginid.generateServiceToken(type, "ES256", username);
+  }
+
+  return res.status(200).json({ service_token: serviceToken });
 });
 
 module.exports = router;

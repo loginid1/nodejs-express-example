@@ -23,26 +23,38 @@ const randomString = (length) => {
   return result;
 };
 
+const request = async (url, body) => {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (res.status === 204) {
+    return {};
+  }
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.message || "Bad Request");
+  }
+
+  return data;
+};
+
 /*
  * This creates a Transaction ID and displays it on the UI
  */
 txCreateBtn.addEventListener("click", async () => {
-  if (!txPayloadElm.value) return;
+  const txPayload = txPayloadElm.value;
+  if (!txPayload) return;
   messageElm.textContent = "";
 
   try {
-    const res = await fetch("/api/tx/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tx_payload: txPayloadElm.value }),
+    const { id: txId } = await request("/api/tx/create", {
+      tx_payload: txPayload,
     });
-
-    const data = await res.json();
-
-    if (!res.ok) throw data;
-
-    const { id: txId } = data;
-
     txIdElm.textContent = txId;
   } catch (e) {
     console.log(e);
@@ -54,25 +66,15 @@ txCreateBtn.addEventListener("click", async () => {
  * This confirms the Transaction ID displayed on the UI
  */
 txConfirmBtn.addEventListener("click", async () => {
-  if (!txIdElm.textContent) return;
+  const txId = txIdElm.textContent;
+  if (!txId) return;
   messageElm.textContent = "";
 
   try {
-    const { jwt } = await webSDK.confirmTransaction(
-      username,
-      txIdElm.textContent
-    );
+    const { jwt } = await webSDK.confirmTransaction(username, txId);
+    const { isValid } = await request("/api/tx/verify", { jwt });
 
-    const res = await fetch("/api/tx/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jwt }),
-    });
-
-    const data = await res.json();
-    if (!res.ok) throw data;
-
-    if (data.isValid) {
+    if (isValid) {
       messageElm.textContent = "Transaction Confirmed!";
     } else {
       messageElm.textContent = "Transaction is not valid";
@@ -90,26 +92,23 @@ txConfirmBtn.addEventListener("click", async () => {
  * This does both create and confirm a Transaction at the same time
  */
 txCreateConfirmBtn.addEventListener("click", async () => {
-  if (!txPayloadElm.value) return;
+  const txPayload = txPayloadElm.value;
+  if (!txPayload) return;
   messageElm.textContent = "";
 
   try {
+    const { service_token: serviceToken } = await request(
+      "/api/tokens/create",
+      { username, tx_payload: txPayload }
+    );
     const { jwt } = await webSDK.createAndConfirmTransaction(
       username,
-      txPayloadElm.value,
-      { nonce: randomString(16) }
+      txPayload,
+      { nonce: randomString(16), authorization_token: serviceToken }
     );
 
-    const res = await fetch("/api/tx/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jwt }),
-    });
-
-    const data = await res.json();
-    if (!res.ok) throw data;
-
-    if (data.isValid) {
+    const { isValid } = await request("/api/tx/verify", { jwt });
+    if (isValid) {
       messageElm.textContent = "Transaction Confirmed!";
     } else {
       messageElm.textContent = "Transaction is not valid";

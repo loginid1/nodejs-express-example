@@ -11,7 +11,7 @@ const codeInputAdd = document.getElementById("code-add");
 const pushBtn = document.getElementById("button-push");
 const addBtn = document.getElementById("button-add");
 
-const messageElem = document.querySelector(".message");
+const messageElm = document.getElementById("message");
 
 const dataElem = document.querySelector("data");
 const baseUrl = dataElem.dataset.baseUrl;
@@ -19,18 +19,42 @@ const clientId = dataElem.dataset.clientId;
 
 const webSDK = new web.default(baseUrl, clientId);
 
+const request = async (url, body) => {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (res.status === 204) {
+    return {};
+  }
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.message || "Bad Request");
+  }
+
+  return data;
+};
+
 const handlerRegisterFido2 = async () => {
   try {
-    const result = await webSDK.registerWithFido2(nameInputFido2.value);
-    const res = await fetch("/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jwt: result.jwt, user: result.user }),
+    const username = nameInputFido2.value;
+    const { service_token: serviceToken } = await request(
+      "/api/tokens/create",
+      {
+        type: "auth.register",
+        username,
+      }
+    );
+    //validate JWT and create session
+    const { jwt, user } = await webSDK.registerWithFido2(username, {
+      authorization_token: serviceToken,
     });
-
-    if (res.ok) {
-      window.location.replace("/dashboard");
-    }
+    await request("/register", { jwt, user });
+    window.location.replace("/dashboard");
   } catch (e) {
     console.log(e);
     alert(e.message);
@@ -39,16 +63,20 @@ const handlerRegisterFido2 = async () => {
 
 const handlerAuthenticateFido2 = async () => {
   try {
-    const result = await webSDK.authenticateWithFido2(nameInputFido2.value);
-    const res = await fetch("/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jwt: result.jwt, user: result.user }),
+    const username = nameInputFido2.value;
+    const { service_token: serviceToken } = await request(
+      "/api/tokens/create",
+      {
+        type: "auth.login",
+        username,
+      }
+    );
+    //validate JWT and create session
+    const { jwt, user } = await webSDK.authenticateWithFido2(username, {
+      authorization_token: serviceToken,
     });
-
-    if (res.ok) {
-      window.location.replace("/dashboard");
-    }
+    await request("/login", { jwt, user });
+    window.location.replace("/dashboard");
   } catch (e) {
     console.log(e);
     alert(e.message);
@@ -57,49 +85,47 @@ const handlerAuthenticateFido2 = async () => {
 
 const handlerPushAuth = async () => {
   try {
+    const username = nameInputPush.value;
+    const code = codeInputPush.value;
     //1. Authenticate user
-    await webSDK.authenticateWithFido2(nameInputPush.value);
-
-    //2 Authorize code
-    const res = await fetch(`/api/codes/push/authorize`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        username: nameInputPush.value,
-        code: codeInputPush.value,
-      }),
+    const { service_token: serviceToken } = await request(
+      "/api/tokens/create",
+      {
+        type: "auth.login",
+        username,
+      }
+    );
+    await webSDK.authenticateWithFido2(username, {
+      authorization_token: serviceToken,
     });
 
-    if (!res.ok) {
-      const data = await res.json();
-      console.log(data);
-      throw new Error(data.message);
-    }
+    //2 Authorize code
+    await request("/api/codes/push/authorize", { username, code });
   } catch (e) {
+    console.log(e);
     alert(e.message);
   }
 };
 
 const handlerAddAuth = async () => {
   try {
+    const username = nameInputAdd.value;
+    const code = codeInputAdd.value;
     //1. Authenticate user
-    await webSDK.authenticateWithFido2(nameInputAdd.value);
-
-    //2 Authorize code
-    const res = await fetch(`/api/codes/add/authorize`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        username: nameInputAdd.value,
-        code: codeInputAdd.value,
-      }),
+    const { service_token: serviceToken } = await request(
+      "/api/tokens/create",
+      {
+        type: "auth.login",
+        username,
+      }
+    );
+    await webSDK.authenticateWithFido2(username, {
+      authorization_token: serviceToken,
     });
 
-    if (!res.ok) {
-      const data = await res.json();
-      console.log(data);
-      throw new Error(data.message);
-    }
+    //2 Authorize code
+    await request("/api/codes/add/authorize", { username, code });
+    messageElm.textContent = "Code Authorized";
   } catch (e) {
     alert(e.message);
   }
