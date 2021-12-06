@@ -128,16 +128,21 @@ router.post("/codes/:authentication/authorize", async (req, res) => {
 });
 
 router.post("/tokens/create", async (req, res) => {
-  const { type, username, tx_payload: txPayload } = req.body;
+  try {
+    const { type, username, tx_payload: txPayload } = req.body;
 
-  let serviceToken;
-  if (txPayload) {
-    serviceToken = loginid.generateTxAuthToken(txPayload, username);
-  } else {
-    serviceToken = loginid.generateServiceToken(type, "ES256", username);
+    let serviceToken;
+    if (txPayload) {
+      serviceToken = loginid.generateTxAuthToken(txPayload, username);
+    } else {
+      serviceToken = loginid.generateServiceToken(type, "ES256", username);
+    }
+
+    return res.status(200).json({ service_token: serviceToken });
+  } catch (e) {
+    console.log(e);
+    return res.status(400).json({ message: "Creating service token failed" });
   }
-
-  return res.status(200).json({ service_token: serviceToken });
 });
 
 module.exports = router;
